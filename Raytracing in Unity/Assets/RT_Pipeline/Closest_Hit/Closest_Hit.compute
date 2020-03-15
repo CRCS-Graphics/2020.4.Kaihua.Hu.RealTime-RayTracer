@@ -1,0 +1,20 @@
+﻿#include "../Utility/Structs.compute"
+#include "Shading/Phong.compute"
+
+#ifndef RT_CLOSESTHIT
+#define RT_CLOSESTHIT
+
+void ClosestHit(inout float3 result,
+                inout Ray ray,
+                RayHitRecord hitRecord,
+				StructuredBuffer<RTMaterial> _Materials,
+	            StructuredBuffer<RTBVHNode> _BVHTreeList,
+                StructuredBuffer<RTTriangle> _TriangleList,
+                StructuredBuffer<DirectionalLight> _DirectionalLights,
+				StructuredBuffer<PointLight> _PointLights,
+				int castShadow)
+{
+    PhongShading(result, ray, hitRecord, _Materials, _BVHTreeList, _TriangleList, _DirectionalLights, _PointLights, castShadow);
+}
+
+#endif 

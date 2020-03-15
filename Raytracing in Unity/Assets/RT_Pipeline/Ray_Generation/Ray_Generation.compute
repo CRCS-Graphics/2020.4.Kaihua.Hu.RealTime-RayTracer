@@ -1,0 +1,24 @@
+﻿#include "../Utility/Structs.compute"
+
+#ifndef RAY_GENERATION
+#define RAY_GENERATION
+
+Ray CreateCameraRay (RWTexture2D<float4> Result, float4x4 _CameraToWorld, float4x4 _CameraInverseProjection, uint3 id, float2 pixelSample)
+{
+    uint width, height;
+    Result.GetDimensions(width, height);
+   // float2 uv = float2((id.xy + float2(0.5f, 0.5f)) / float2(width, height) * 2.0f - 1.0f);
+	float2 uv = float2((id.xy + pixelSample) / float2(width, height) * 2.0f - 1.0f);
+
+    // Transform the camera origin to world space
+    float3 origin = mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    // Invert the perspective projection of the view-space position
+    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
+    // Transform the direction from camera to world space and normalize
+    direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
+    direction = normalize(direction);
+
+    return CreateRay(origin, direction);
+}
+
+#endif  // RAY_COMPUTE

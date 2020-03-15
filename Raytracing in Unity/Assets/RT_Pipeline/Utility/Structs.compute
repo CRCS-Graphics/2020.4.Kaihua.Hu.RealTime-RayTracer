@@ -1,0 +1,118 @@
+﻿#ifndef RT_STRUCTS
+#define RT_STRUCTS
+
+static const float PI = 3.14159265f;
+
+/*
+The RT Data structure
+*/
+struct GeomatricData
+{
+    // Camera
+    float4x4 _CameraToWorld;
+    float4x4 _CameraInverseProjection;
+};
+
+/*
+The Ray structure
+-------------------------------------------------------------------------------------
+*/
+struct Ray
+{
+    float3 origin;
+    float3 direction;
+	float3 energy;
+};
+
+Ray CreateRay(float3 origin, float3 direction)
+{
+	Ray ray;
+	ray.origin = origin;
+	ray.direction = direction;
+	ray.energy = float3(1.0f, 1.0f, 1.0f);
+	return ray;
+}
+
+/*
+The RayHitRecord structure
+-------------------------------------------------------------------------------------
+*/
+struct RayHitRecord
+{
+    float distance;
+    float3 position;
+    float3 normal;
+    uint matIndex;
+};
+
+RayHitRecord CreateRayHitRecord()
+{
+	RayHitRecord hit;
+	hit.position = float3(0.0f, 0.0f, 0.0f);
+	hit.distance = 1.#INF;
+	hit.normal = float3(0.0f, 0.0f, 0.0f);
+	hit.matIndex = -1;
+	//hit.geoIndex = 10000;
+	return hit;
+}
+
+/*
+Material
+-------------------------------------------------------------------------------------
+*/
+struct RTMaterial
+{
+	float3 color;
+	float3 specular;
+	float3 diffuse;
+	float3 reflectness;
+	uint shininess;
+};
+
+struct RTSphere
+{
+	float4x4 worldToLocal;
+    uint matIndex;
+};
+
+struct RTObject
+{
+	float4x4 worldToLocal;
+	int startIndex;
+	int size;
+	int matIndex;
+};
+
+struct DirectionalLight
+{
+   float3 color;
+   float3 direction;
+};
+
+struct PointLight
+{
+	float3 color;
+	float3 position;
+	float range;
+};
+
+struct RTTriangle
+{
+	float3 v0;
+	float3 v1;
+	float3 v2;
+	float3 normal;
+	uint matIndex;
+};
+
+struct RTBVHNode
+{
+	uint isLeaf;
+	float3 boundingBoxMin;
+	float3 boundingBoxMax;
+	uint subTreeCount;
+	uint startIndex;
+	uint triangleCount;
+};
+
+#endif 

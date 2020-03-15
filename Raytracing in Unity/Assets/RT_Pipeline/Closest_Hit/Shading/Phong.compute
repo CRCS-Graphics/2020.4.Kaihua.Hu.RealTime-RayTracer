@@ -1,0 +1,114 @@
+﻿#include "../../Utility/Structs.compute"
+#include "../../RT_Trace.compute"
+
+#ifndef PHONG_COMPUTE
+#define PHONG_COMPUTE
+
+float3 PhongDiffuseShading(float3 lightDir, float3 lightColor, float3 hitNormal)
+{
+    float nDotL = dot(hitNormal, -1 * lightDir);
+    if (nDotL < 0)
+    {
+        nDotL = 0;
+    }
+    return lightColor * nDotL;
+}
+
+float3 PhongSpecularShading(float3 lightDir, float3 lightColor, float3 rayDir, float3 hitNormal, uint shininess)
+{
+    float3 R = reflect(lightDir, hitNormal);
+    float vDotR = dot(-1 * rayDir, R);
+    if (vDotR < 0)
+    {
+        return float3(0.0f, 0.0f, 0.0f);
+    }
+    return pow(abs(vDotR), shininess) * lightColor;
+}
+
+void PhongShading(
+    inout float3 result,
+    inout Ray ray,
+    RayHitRecord hitRecord,
+	StructuredBuffer<RTMaterial> _Materials,
+	StructuredBuffer<RTBVHNode> _BVHTreeList,
+    StructuredBuffer<RTTriangle> _TriangleList,
+    StructuredBuffer<DirectionalLight> _DirectionalLights,
+	StructuredBuffer<PointLight> _PointLights,
+	int castShadow)
+{
+
+	uint matIndex = hitRecord.matIndex;
+	float3 specular = _Materials[matIndex].specular;
+	float3 diffuse = _Materials[matIndex].diffuse;
+	float3 reflectness = _Materials[matIndex].reflectness;
+	float3 color = _Materials[matIndex].color;
+	uint shininess = _Materials[matIndex].shininess;
+
+	float3 CurrentResult;
+
+	uint count, stride, i;
+	_DirectionalLights.GetDimensions(count, stride);
+
+    for (i = 0; i < count; i++)
+    {
+		if (castShadow == 1) {
+			Ray shadowRay = CreateRay(hitRecord.position + hitRecord.normal * 0.001f, -(_DirectionalLights[i].direction));
+
+			RayHitRecord shadowHitRecord = CreateRayHitRecord();
+
+			if (CastShadow(shadowRay, shadowHitRecord, _BVHTreeList, _TriangleList)) {
+				continue;
+			}
+		}
+
+        CurrentResult += PhongDiffuseShading(_DirectionalLights[i].direction, _DirectionalLights[i].color,
+			            hitRecord.normal) * diffuse
+					  + PhongSpecularShading(_DirectionalLights[i].direction, _DirectionalLights[i].color, 
+                        ray.direction, hitRecord.normal, shininess) * specular;          
+    }
+
+	_PointLights.GetDimensions(count, stride);
+
+	for (i = 0; i < count; i++)
+	{
+		float distance = length(_PointLights[i].position - hitRecord.position);
+		if (distance > _PointLights[i].range) {
+			continue;
+		}
+
+		float3 L = normalize(hitRecord.position - _PointLights[i].position);
+
+		if (castShadow == 1) {
+			Ray shadowRay = CreateRay(hitRecord.position + hitRecord.normal * 0.001f, -L);
+
+			RayHitRecord shadowHitRecord = CreateRayHitRecord();
+
+			if (CastShadow(shadowRay, shadowHitRecord, _BVHTreeList, _TriangleList)) {
+				float shadowDis = length(hitRecord.position - shadowHitRecord.position);
+				if (shadowDis < distance) {
+					continue;
+				}
+			}
+		}
+
+		float denom = distance / _PointLights[i].range + 1;
+		float attenuation = 1 / (denom * denom);
+
+		attenuation = (attenuation - 0.25) / (1 - 0.25);
+		attenuation = max(attenuation, 0);
+
+		CurrentResult += (PhongDiffuseShading(L, _PointLights[i].color,
+						hitRecord.normal) * diffuse
+					  + PhongSpecularShading(L, _PointLights[i].color,
+						ray.direction, hitRecord.normal, shininess) * specular) * attenuation;
+	}
+
+	CurrentResult *= ray.energy;
+	result += CurrentResult;
+
+	ray.origin = hitRecord.position + hitRecord.normal * 0.001f;
+	ray.direction = reflect(ray.direction, hitRecord.normal);
+	ray.energy *= reflectness;
+}
+
+#endif // PHONG_COMPUTE

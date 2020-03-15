@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6687fffb6852ea3469af984d8dfef30b, type: 3}
+  m_Name: Bunny
+  m_EditorClassIdentifier: 
+  color: {r: 0, g: 0, b: 0, a: 0}
+  specular:
+    R: 0.649
+    G: 0.59
+    B: 0.49
+  diffuse:
+    R: 0.7
+    G: 0.7
+    B: 0.7
+  reflectness:
+    R: 0.61
+    G: 0.495
+    B: 0.59
+  shininess: 59

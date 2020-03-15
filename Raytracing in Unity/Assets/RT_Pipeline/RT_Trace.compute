@@ -1,0 +1,78 @@
+﻿#include "Utility/Structs.compute"
+#include "Intersection_Shaders/Sphere.compute"
+#include "Intersection_Shaders/Triangle.compute"
+#include "Intersection_Shaders/Box.compute"
+
+#ifndef RT_TRACE
+#define RT_TRACE
+
+void TraceRay(Ray ray, 
+			  inout RayHitRecord hitRecord, 
+			  StructuredBuffer<RTBVHNode> _BVHTreeList,
+			  StructuredBuffer<RTTriangle> _TriangleList) {
+	uint i, j, count, stride;
+	_BVHTreeList.GetDimensions(count, stride);
+
+	for (i = 0; i < count; i++) {
+		if (_BVHTreeList[i].isLeaf == 1) {
+			uint range = _BVHTreeList[i].startIndex + _BVHTreeList[i].triangleCount;
+			for (uint j = _BVHTreeList[i].startIndex; j < range; j++) {
+				IntersectTriangle(ray,
+					hitRecord,
+					_TriangleList[j].matIndex,
+					_TriangleList[j].normal,
+					_TriangleList[j].v0,
+					_TriangleList[j].v1,
+					_TriangleList[j].v2);
+			}
+			continue;
+		}
+
+		bool isHit = rayBoxIntersection(ray, _BVHTreeList[i].boundingBoxMin, _BVHTreeList[i].boundingBoxMax);
+
+		if (isHit == false) {
+			i = i + _BVHTreeList[i].subTreeCount;
+			continue;
+		}
+	}
+}
+
+bool CastShadow(Ray ray,
+	inout RayHitRecord hitRecord,
+	StructuredBuffer<RTBVHNode> _BVHTreeList,
+	StructuredBuffer<RTTriangle> _TriangleList) {
+
+	uint i, j, count, stride;
+	_BVHTreeList.GetDimensions(count, stride);
+
+	for (i = 0; i < count; i++) {
+		if (_BVHTreeList[i].isLeaf == 1) {
+			uint range = _BVHTreeList[i].startIndex + _BVHTreeList[i].triangleCount;
+			for (uint j = _BVHTreeList[i].startIndex; j < range; j++) {
+				IntersectTriangle(ray,
+					hitRecord,
+					_TriangleList[j].matIndex,
+					_TriangleList[j].normal,
+					_TriangleList[j].v0,
+					_TriangleList[j].v1,
+					_TriangleList[j].v2);
+				if (hitRecord.distance < 1.#INF)
+				{
+					return true;
+				}
+			}
+			continue;
+		}
+
+		bool isHit = rayBoxIntersection(ray, _BVHTreeList[i].boundingBoxMin, _BVHTreeList[i].boundingBoxMax);
+
+		if (isHit == false) {
+			i = i + _BVHTreeList[i].subTreeCount;
+			continue;
+		}
+	}
+	return false;
+}
+
+
+#endif 

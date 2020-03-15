@@ -1,0 +1,79 @@
+﻿#include "Miss_Shaders/Miss_Shader.compute"
+#include "Closest_Hit/Closest_Hit.compute"
+#include "Ray_Generation/Ray_Generation.compute"
+
+#include "RT_Trace.compute"
+#include "Utility/Structs.compute"
+
+#pragma kernel RTmain
+
+// Create a RenderTexture with enableRandomWrite flag 
+RWTexture2D<float4> Result;
+
+// Camera
+float4x4 _CameraToWorld;
+float4x4 _CameraInverseProjection;
+
+// Skybox
+Texture2D<float4> _SkyboxTexture;
+SamplerState sampler_SkyboxTexture;
+
+// Max ray generation
+int _MaxGeneration;
+StructuredBuffer<float> _SamplesPerPixel;
+
+int _CastShadow;
+
+// Material
+StructuredBuffer<RTMaterial> _Materials;
+
+
+StructuredBuffer<RTBVHNode> _BVHTreeList;
+StructuredBuffer<RTTriangle> _TriangleList;
+
+// Light
+StructuredBuffer<DirectionalLight> _DirectionalLights;
+StructuredBuffer<PointLight> _PointLights;
+
+void getPixelColor(float2 pixelSample, inout float3 result, uint3 id) {
+	Ray ray = CreateCameraRay(Result, _CameraToWorld, _CameraInverseProjection, id, pixelSample);
+
+	for (int i = 1; i <= _MaxGeneration; i++)
+	{
+		RayHitRecord hitRecord = CreateRayHitRecord();
+		TraceRay(ray, hitRecord, _BVHTreeList, _TriangleList);
+
+		if (isinf(hitRecord.distance)) {
+			MissShader(result, ray, _SkyboxTexture, sampler_SkyboxTexture);
+		}
+		else
+		{
+			ClosestHit(result, ray, hitRecord, _Materials, _BVHTreeList, _TriangleList, _DirectionalLights, _PointLights, _CastShadow);
+		}
+
+		if (!any(ray.energy))
+		{
+			break;
+		}
+	}
+}
+
+[numthreads(8, 8, 1)]
+void RTmain(uint3 id : SV_DispatchThreadID)
+{
+	float3 result = float3(0.0f, 0.0f, 0.0f);
+
+	getPixelColor(float2(0.5f, 0.5f), result, id);
+
+	uint i, count, stride;
+	_SamplesPerPixel.GetDimensions(count, stride);
+
+	for (i = 0; i < count; i++) {
+		getPixelColor(float2(_SamplesPerPixel[i], _SamplesPerPixel[i]), result, id);
+	}
+
+	result = result / (count + 1);
+
+	Result[id.xy] = float4(result, 1);
+}
+

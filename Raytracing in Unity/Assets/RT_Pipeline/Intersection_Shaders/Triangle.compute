@@ -1,0 +1,142 @@
+﻿#include "../Utility/Structs.compute"
+#include "../Utility/MatrixInverse.compute"
+
+#ifndef TRIANGLE_INTERSECTION_COMPUTE
+#define TRIANGLE_INTERSECTION_COMPUTE
+
+static const float EPSILON = 1.19e-07f;
+
+void IntersectTriangle( Ray ray,
+						inout RayHitRecord hitRecord,
+						uint materialIndex,
+	                    float3 normal,
+						float3 vert0,
+						float3 vert1,
+						float3 vert2){
+
+	// find vectors for two edges sharing vert0
+	float3 edge1 = vert1 - vert0;
+	float3 edge2 = vert2 - vert0;
+
+	// begin calculating determinant - also used to calculate U parameter
+	float3 pvec = cross(ray.direction, edge2);
+
+	// if determinant is near zero, ray lies in plane of triangle
+	float det = dot(edge1, pvec);
+
+	// use backface culling
+	if (det < EPSILON)
+	{
+		return;
+	}
+
+	float inv_det = 1.0f / det;
+	// calculate distance from vert0 to ray origin
+	float3 tvec = ray.origin - vert0;
+
+	// calculate U parameter and test bounds
+	float u = dot(tvec, pvec) * inv_det;
+
+	if (u < 0.0 || u > 1.0f)
+	{
+		return;
+	}
+
+	// prepare to test V parameter
+	float3 qvec = cross(tvec, edge1);
+
+	// calculate V parameter and test bounds
+	float v = dot(ray.direction, qvec) * inv_det;
+	if (v < 0.0 || u + v > 1.0f)
+	{
+		return;
+	}
+
+	// calculate t, ray intersects triangle
+	float dis = dot(edge2, qvec) * inv_det;
+
+	if (dis > 0 && dis < hitRecord.distance)
+	{
+		hitRecord.distance = dis;
+		hitRecord.position = ray.origin + dis * ray.direction;
+		hitRecord.normal = normal;
+		hitRecord.matIndex = materialIndex;
+	}
+}
+
+void IntersectTriangleInOS(Ray ray,
+	float4x4 worldToLocal,
+	inout RayHitRecord hitRecord,
+	uint materialIndex,
+	float3 normal,
+	float3 vert0,
+	float3 vert1,
+	float3 vert2) {
+
+	float3 origin = (mul(worldToLocal, float4(ray.origin, 1))).xyz;
+	float3 direction = (mul(worldToLocal, float4(ray.direction, 0))).xyz;
+	direction = normalize(direction);
+
+
+
+	// find vectors for two edges sharing vert0
+	float3 edge1 = vert1 - vert0;
+	float3 edge2 = vert2 - vert0;
+
+	// begin calculating determinant - also used to calculate U parameter
+	float3 pvec = cross(direction, edge2);
+
+	// if determinant is near zero, ray lies in plane of triangle
+	float det = dot(edge1, pvec);
+
+	// use backface culling
+	if (det < EPSILON)
+	{
+		return;
+	}
+
+	float inv_det = 1.0f / det;
+	// calculate distance from vert0 to ray origin
+	float3 tvec = origin - vert0;
+
+	// calculate U parameter and test bounds
+	float u = dot(tvec, pvec) * inv_det;
+
+	if (u < 0.0 || u > 1.0f)
+	{
+		return;
+	}
+
+	// prepare to test V parameter
+	float3 qvec = cross(tvec, edge1);
+
+	// calculate V parameter and test bounds
+	float v = dot(direction, qvec) * inv_det;
+	if (v < 0.0 || u + v > 1.0f)
+	{
+		return;
+	}
+
+	// calculate t, ray intersects triangle
+	float dis = dot(edge2, qvec) * inv_det;
+
+	if (dis <= 0) {
+		return;
+	}
+
+	float3 position = origin + dis * direction;
+
+	float4x4 inverse = matrixInverse(worldToLocal);
+	position = (mul(inverse, float4(position, 1))).xyz;
+	float distance = length(position - ray.origin);
+
+	if (distance < hitRecord.distance)
+	{
+		hitRecord.distance = distance;
+		hitRecord.position = position;
+		hitRecord.normal = normal;
+		hitRecord.matIndex = materialIndex;
+	}
+}
+
+#endif 

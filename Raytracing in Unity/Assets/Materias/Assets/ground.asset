@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6687fffb6852ea3469af984d8dfef30b, type: 3}
+  m_Name: ground
+  m_EditorClassIdentifier: 
+  color: {r: 0, g: 0, b: 0, a: 0}
+  specular:
+    R: 0.12
+    G: 0.124
+    B: 0.12
+  diffuse:
+    R: 0.07
+    G: 0.07
+    B: 0.07
+  reflectness:
+    R: 0.12
+    G: 0.12
+    B: 0.12
+  shininess: 9

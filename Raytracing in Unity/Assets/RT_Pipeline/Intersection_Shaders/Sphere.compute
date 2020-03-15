@@ -1,0 +1,79 @@
+﻿#include "../Utility/Structs.compute"
+#include "../Utility/MatrixInverse.compute"
+
+
+#ifndef SPHERE_INTERSECTION_COMPUTE
+#define SPHERE_INTERSECTION_COMPUTE
+
+//void SphereIntersection(Ray ray, inout RayHitRecord closestHit, RTSphere sphere)
+//{
+//    // // Step 1: Define
+//    float3 oriToCtr = sphere.transform - ray.origin;
+//    float d = dot(ray.direction, oriToCtr);
+//
+//    // Step 2: Discriminant
+//    float discriminant = d * d - dot(-oriToCtr, -oriToCtr) + sphere.radius * sphere.radius;
+//    if (discriminant < 0)
+//    {
+//        return;
+//    }
+//
+//    // Step 3: Calculate hit distance
+//    float disSqrt = sqrt(discriminant);
+//    float hitDis = d - disSqrt > 0 ? d - disSqrt : d + disSqrt; // If d - disSqrt > 0, then d + disSqrt must be greater than d - disSqrt, we take the least positive value; Otherwise, we take d + disSqrt
+//
+//    // Step 4: Update best hit distance
+//    if (hitDis > 0 && hitDis < closestHit.distance)
+//    {
+//        closestHit.distance = hitDis;
+//        closestHit.position = ray.origin + hitDis * ray.direction;
+//        closestHit.normal = normalize(closestHit.position - sphere.transform);
+//        closestHit.matIndex = sphere.matIndex;
+//    }
+//}
+
+// Compute ray sphere intersection in object space
+void SphereIntersectionInOS(Ray ray, inout RayHitRecord hitRecord, RTSphere sphere)
+{
+    float3 origin = (mul(sphere.worldToLocal, float4(ray.origin, 1))).xyz;
+    float3 direction = (mul(sphere.worldToLocal, float4(ray.direction, 0))).xyz;
+    direction = normalize(direction);
+
+	float3 oriToCtr = float3(0, 0, 0) - origin;
+	float d = dot(direction, oriToCtr);
+
+	float discriminant = d * d - dot(-oriToCtr, -oriToCtr) + 0.5 * 0.5;
+	if (discriminant < 0)
+	{
+		return;
+	}
+
+
+	float disSqrt = sqrt(discriminant);
+	float hitdis = d - disSqrt > 0 ? d - disSqrt : d + disSqrt;
+	if (hitdis < 0) {
+		return;
+	}
+
+    float3 position = origin + hitdis * direction;
+    float3 normal = (position - float3(0, 0, 0)) / 0.5f;
+
+    float4x4 inverse = matrixInverse(sphere.worldToLocal);
+    position = (mul(inverse, float4(position, 1))).xyz;
+
+    normal = (mul(transpose(sphere.worldToLocal), float4(normal, 0))).xyz;
+    normal = normalize(normal);
+
+    float distance = length(position - ray.origin);
+
+	// step 4: update best hit distance
+    if (distance < hitRecord.distance)
+    {
+        hitRecord.distance = distance;
+        hitRecord.position = position;
+        hitRecord.normal = normal;
+        hitRecord.matIndex = sphere.matIndex;
+    }
+}
+
+#endif 
